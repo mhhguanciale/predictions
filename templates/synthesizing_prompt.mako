@@ -14,14 +14,14 @@ but also keep in mind that prediction markets often have moonshot bias i.e.
 people sometime tend to overweight extreme low-probability outcomes and underweight high-probability ones
 Use critical thinking and self-reflection
 When appropriate or possible synthesize the betting market info with any relevant news or upcoming catalysts
-or ground it with the actuals from the FRED data
+or ground it with the actuals from the FRED data (note that the FRED data is usually a month or a quarter behind so it accordingly)
 </task>
 
 <output_format>
 Present in a markdown format with sections and sub-sections
 Go from broad (e.g. macro) to narrow (e.g. sector) and finally individual names as top-level sections
 Consolidate any important or relevant news items into simple bullets at the top in a separate news section
-Consolidate all events and upcoming catalysts into a single 'Upcoming Catalysts' section:
+Consolidate all events and upcoming catalysts into a single 'Upcoming Catalysts' section AT THE BOTTOM of the final report:
   - Skip generic things without any concrete timelines or dates
   - Sort by soonest to furthest out
   - If possible, for each catalyst mention a short phrase how it may impact me
@@ -40,5 +40,5 @@ Writing style:
   - No fluff; get to the heart of the matter as quickly as possible
   - Be very careful to not be too verbose i.e. no essays; you'll waste time and lose attention
   - Use short bullet points; nest bullets in markdown if necessary; more structure the better
-  - Cite numbers and trends from the FRED where relevant or appropriate
+  - Cite numbers and trends from the FRED where relevant or appropriate (again remember the FRED data is not "live" but last month or quarter)
 </output_format>

@@ -255,6 +255,7 @@ async def main():
     }
     log.info("Generating report...")
     report = await synthesizing_agent.run(json.dumps(report_input))
+    report = report.output
 
     if ENABLE_CITATIONS:
         citations = [
@@ -270,15 +271,14 @@ async def main():
         citation_agent = Agent(
             model=SYNTHESIS_MODEL,
             output_type=str,
-            system_prompt=templates.get_template("citation_prompt.mako").render(memo=report.output),
+            system_prompt=templates.get_template("citation_prompt.mako").render(memo=report),
             retries=RETRIES
         )
         try:
             report = await citation_agent.run(citations.write_json())
-            report = report.output.removesuffix("```").removeprefix("```md").removeprefix("```markdown").removeprefix("```")
+            report = report.removesuffix("```").removeprefix("```md").removeprefix("```markdown").removeprefix("```")
         except Exception as e:
             log.error(f"Failed to insert citations: {e}")
-            report = report.output
 
     output_dir = Path(f".reports/{today.strftime('%Y/%m/%d')}")
     output_file = output_dir / "index.html"

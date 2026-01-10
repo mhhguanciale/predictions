@@ -12,6 +12,8 @@ DO NOT ADD new text for the link i.e. you should only hyperlink an existing phra
 i.e. your ONLY additions to the input text of the form "word1 word2 word3 word4" should be "word1 [word2 word3](url) word4"
 Note how I DID NOT CHANGE the original word1 word2 etc and how DID NOT ADD any new words and nor did I delete any text from the input
 I just inserted in the citation in a SHORT subsection of the input using [relevant phrase](url) markdown syntax
+By SHORT - I meant LITERALLY 1 or 2 word max that should be put inside the phrase in [phrase](url)
+Do not modify the phrase - it should be from given document. Do not insert text about the URL like the site etc.
 DO NOT ADD link for a whole sentence - your citation should be for 1-3 word phrases or key numbers only
 Return JUST the original markdown (with citations) and say nothing else
 Make sure to return without the leading and ending backticks i.e. the output should just be the valid markdown WITHOUT any enclosing backticks
