@@ -21,6 +21,8 @@ IS_DEV = not IS_PROD
 
 QUICK_TEST = IS_DEV # If True, run quickly on first few predictions; useful for smoke-testing
 
+ENABLE_CITATIONS = False
+
 BATCH_REQUEST_DELAY_SECONDS = 5
 
 BATCH_SIZE = 100
@@ -254,28 +256,29 @@ async def main():
     log.info("Generating report...")
     report = await synthesizing_agent.run(json.dumps(report_input))
 
-    citations = [
-        tagged_predictions.select("title", "url"),
-        events.select("title", "url"),
-        news.select("title", "url") if news is not None else None,
-        fred_data.select("title", "url") if fred_data is not None else None
-    ]
-    citations = [c for c in citations if c is not None]
-    citations = pl.concat(citations).filter(pl.col("url").is_not_null())
-    log.info(f"Adding citations from {len(citations)} sources ...")
+    if ENABLE_CITATIONS:
+        citations = [
+            tagged_predictions.select("title", "url"),
+            events.select("title", "url"),
+            news.select("title", "url") if news is not None else None,
+            fred_data.select("title", "url") if fred_data is not None else None
+        ]
+        citations = [c for c in citations if c is not None]
+        citations = pl.concat(citations).filter(pl.col("url").is_not_null())
+        log.info(f"Adding citations from {len(citations)} sources ...")
 
-    citation_agent = Agent(
-        model=SYNTHESIS_MODEL,
-        output_type=str,
-        system_prompt=templates.get_template("citation_prompt.mako").render(memo=report.output),
-        retries=RETRIES
-    )
-    try:
-        report = await citation_agent.run(citations.write_json())
-        report = report.output.removesuffix("```").removeprefix("```md").removeprefix("```markdown").removeprefix("```")
-    except Exception as e:
-        log.error(f"Failed to insert citations: {e}")
-        report = report.output
+        citation_agent = Agent(
+            model=SYNTHESIS_MODEL,
+            output_type=str,
+            system_prompt=templates.get_template("citation_prompt.mako").render(memo=report.output),
+            retries=RETRIES
+        )
+        try:
+            report = await citation_agent.run(citations.write_json())
+            report = report.output.removesuffix("```").removeprefix("```md").removeprefix("```markdown").removeprefix("```")
+        except Exception as e:
+            log.error(f"Failed to insert citations: {e}")
+            report = report.output
 
     output_dir = Path(f".reports/{today.strftime('%Y/%m/%d')}")
     output_file = output_dir / "index.html"
