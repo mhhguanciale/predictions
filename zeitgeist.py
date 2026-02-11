@@ -31,7 +31,7 @@ RETRIES = 3
 
 CLASSIFYING_MODEL = "openai:gpt-5-mini-2025-08-07"
 EVENTS_MODEL = "openai:gpt-5.1-2025-11-13"
-SYNTHESIS_MODEL = "openai:gpt-4.1-2025-04-14"
+SYNTHESIS_MODEL = "openai:gpt-5.1-2025-11-13"
 
 
 today = date.today()
