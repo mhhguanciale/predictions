@@ -32,9 +32,21 @@ RATE_LIMIT_WAIT_SECONDS = 10
 BATCH_SIZE = 100
 RETRIES = 3
 
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai").strip().lower()
+assert LLM_PROVIDER in {"openai", "gemini"}, "LLM_PROVIDER must be either 'openai' or 'gemini'"
+
 CLASSIFYING_MODEL = "openai:gpt-5-mini-2025-08-07"
 EVENTS_MODEL = "openai:gpt-5.1-2025-11-13"
-SYNTHESIS_MODEL = "openai:gpt-5.1-2025-11-13"
+OPENAI_SYNTHESIS_MODEL = "openai:gpt-5.1-2025-11-13"
+GEMINI_SYNTHESIS_MODEL = os.getenv("GEMINI_SYNTHESIS_MODEL", "google-gla:gemini-3-pro-preview")
+
+if LLM_PROVIDER == "gemini":
+    # pydantic-ai's google-gla provider reads GOOGLE_API_KEY.
+    if "GOOGLE_API_KEY" not in os.environ and "GEMINI_API_KEY" in os.environ:
+        os.environ["GOOGLE_API_KEY"] = os.environ["GEMINI_API_KEY"]
+    SYNTHESIS_MODEL = GEMINI_SYNTHESIS_MODEL
+else:
+    SYNTHESIS_MODEL = OPENAI_SYNTHESIS_MODEL
 
 
 today = date.today()
@@ -70,6 +82,10 @@ FRED_CODES = {
 }
 
 assert "OPENAI_API_KEY" in os.environ, "No OPENAI_API_KEY found; Either add to .env file or run `export OPENAI_API_KEY=???`"
+if LLM_PROVIDER == "gemini":
+    assert "GOOGLE_API_KEY" in os.environ, (
+        "LLM_PROVIDER=gemini requires GOOGLE_API_KEY (or GEMINI_API_KEY) in env/secrets"
+    )
 assert not(IS_PROD and QUICK_TEST), "QUICK_TEST must be False in GitHub Actions"
 
 ########################################################################################################
@@ -82,6 +98,10 @@ async def sleep_if_rate_limit(response: httpx.Response) -> bool:
     )
     await asyncio.sleep(RATE_LIMIT_WAIT_SECONDS)
     return True
+
+def estimate_tokens(text: str) -> int:
+    # Fast approximation for observability; good enough to spot context pressure.
+    return max(1, len(text) // 4)
 
 async def fetch_from_kalshi() -> pl.DataFrame:
     LIMIT = 100
@@ -241,6 +261,7 @@ synthesizing_agent = Agent(
     model=SYNTHESIS_MODEL,
     output_type=str,
     system_prompt=templates.get_template("synthesizing_prompt.mako").render(today=today),
+    model_settings={"temperature": 0.2},
     retries=RETRIES,
 )
 
@@ -259,6 +280,14 @@ def get_news() -> pl.DataFrame | None:
         return None
 
 async def main():
+    log.info(
+        "LLM config: provider=%s classifier=%s events=%s synthesis=%s",
+        LLM_PROVIDER,
+        CLASSIFYING_MODEL,
+        EVENTS_MODEL,
+        SYNTHESIS_MODEL,
+    )
+
     sources = []
     if ENABLE_KALSHI:
         sources.append(fetch_from_kalshi())
@@ -282,8 +311,18 @@ async def main():
         "upcoming_catalysts": events.select("title", "when", "topics").to_dicts(),
         "fred_data_points": fred_data.select("title", "data").to_dicts() if fred_data is not None else None
     }
+    synthesis_payload = json.dumps(report_input)
+    log.info(
+        "Synthesis input size: chars=%s approx_tokens=%s markets=%s events=%s news=%s fred_series=%s",
+        len(synthesis_payload),
+        estimate_tokens(synthesis_payload),
+        len(report_input["prediction_markets"]),
+        len(report_input["upcoming_catalysts"]),
+        len(report_input["news_headlines"]) if report_input["news_headlines"] is not None else 0,
+        len(report_input["fred_data_points"]) if report_input["fred_data_points"] is not None else 0,
+    )
     log.info("Generating report...")
-    report = await synthesizing_agent.run(json.dumps(report_input))
+    report = await synthesizing_agent.run(synthesis_payload)
     report = report.output
 
     if ENABLE_CITATIONS:
